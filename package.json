@@ -1,6 +1,6 @@
 {
   "name": "add-npm-registry",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Configures npm to use the specified registry for the specified scope",
   "license": "ISC",
   "repository": "ken-browning/add-npm-registry",
