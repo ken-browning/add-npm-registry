@@ -1,6 +1,6 @@
 {
   "name": "add-npm-registry",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Adds the specified registry to your npm configuration",
   "keywords": [
     "npm",
