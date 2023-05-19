@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 import childProcess from "child_process";
 import fs from "fs";
-import path from "path";
+import { join as joinPath } from "path";
 import { Command } from "commander";
 import { z } from "zod";
 
-const program = new Command();
-
-const packageJsonPath = path.join(__dirname, "../package.json");
 const packageJsonSchema = z.object({
   name: z.string(),
   description: z.string(),
   version: z.string(),
 });
-const packageJsonText = fs.readFileSync(packageJsonPath, "utf-8");
-const packageJson = packageJsonSchema.parse(JSON.parse(packageJsonText));
+
+const packageJson = (() => {
+  const path = joinPath(__dirname, "../package.json");
+  const text = fs.readFileSync(path, "utf-8");
+  return packageJsonSchema.parse(JSON.parse(text));
+})();
+
+const program = new Command();
 program
   .name(packageJson.name)
   .description(packageJson.description)
@@ -28,35 +31,64 @@ program
   .argument("<api key>")
   .option("--scope <scope>")
   .option("--location <location>", "passed to `npm config`", "user")
-  .action(artifactory);
+  .action(
+    async (
+      url: string,
+      email: string,
+      apiKey: string,
+      { scope, location }: { scope?: string; location: string }
+    ) => {
+      const sanitized = sanitizeScope(scope);
+      const protocolRelative = protocolRelativeUrl(url);
+
+      await exec(
+        "npm",
+        "config",
+        "set",
+        sanitized ? `${sanitized}:registry` : "registry",
+        url,
+        "--location",
+        location
+      );
+
+      await exec(
+        "npm",
+        "config",
+        "set",
+        `${protocolRelative}:email`,
+        email,
+        "--location",
+        location
+      );
+
+      await exec(
+        "npm",
+        "config",
+        "set",
+        `${protocolRelative}:_auth`,
+        Buffer.from(`${email}:${apiKey}`).toString("base64"),
+        "--location",
+        location
+      );
+    }
+  );
 
 program.parse();
 
-async function artifactory(
-  url: string,
-  email: string,
-  apiKey: string,
-  { scope, location }: { scope?: string; location: string }
-) {
-  const sanitized = scope && !scope.startsWith("@") ? `@${scope}` : scope;
-  const registryKey = sanitized ? `${sanitized}:registry` : "registry";
-  await setConfig(registryKey, url, location);
-
-  const protocolRelative = url.substring(url.indexOf("//"));
-  await setConfig(`${protocolRelative}:email`, email, location);
-
-  const token = Buffer.from(`${email}:${apiKey}`).toString("base64");
-  await setConfig(`${protocolRelative}:_auth`, token, location);
+function sanitizeScope(scope: string | undefined) {
+  if (scope && !scope.startsWith("@")) return `@${scope}`;
+  return scope;
 }
 
-async function setConfig(key: string, value: string, location: string) {
-  await exec(["npm", "config", "set", key, value, "--location", location]);
+function protocolRelativeUrl(url: string) {
+  const i = url.indexOf("//");
+  return url.substring(i);
 }
 
-function exec(command: string[]): Promise<void> {
+function exec(command: string, ...args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     childProcess
-      .spawn(command[0], command.slice(1))
+      .spawn(command, args)
       .on("close", (code) => {
         if (code) throw new Error(`Unexpected exit code: ${code}`);
         resolve();

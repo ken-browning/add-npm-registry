@@ -1,6 +1,6 @@
 # add-npm-registry
 
-A cli program that will update your npm configuration to use a private registry.
+Adds the specified registry to your npm configuration.
 
 ## Supported Registry Providers
 

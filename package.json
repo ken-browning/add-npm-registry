@@ -1,7 +1,12 @@
 {
   "name": "add-npm-registry",
   "version": "0.0.9",
-  "description": "Configures npm to use the specified registry for the specified scope",
+  "description": "Adds the specified registry to your npm configuration",
+  "keywords": [
+    "npm",
+    "registry",
+    "artifactory"
+  ],
   "license": "ISC",
   "repository": "ken-browning/add-npm-registry",
   "bin": {
